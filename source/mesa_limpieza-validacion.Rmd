@@ -1,0 +1,526 @@
+---
+title: 'Práctica 2: Limpieza y validación de los datos'
+author: "Lorenzo Mesa Morales"
+date: "07/01/2019"
+output:
+  pdf_document:
+    number_section: yes
+    toc: yes
+    toc_depth: 3
+  html_document:
+    number_sections: yes
+    toc_float: yes
+    toc: yes
+    toc_depth: 3
+lang: es
+bibliography: scholar.bib
+---
+
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(warn=-1)
+
+```
+\setcounter{tocdepth}{3}
+
+```{r load_libraries, include=FALSE}
+library(knitr)
+library(VIM)
+library(stringr)
+library(plyr)
+library(dplyr)
+library(pROC)
+library(nortest)
+library(corrplot)
+```
+
+
+\newpage
+
+**Objetivos**
+
+Los objetivos concretos de esta práctica son:
+
+* Aprender a aplicar los conocimientos adquiridos y su capacidad de resolución de
+problemas en entornos nuevos o poco conocidos dentro de contextos más amplios o
+multidisciplinares.
+
+* Saber identificar los datos relevantes y los tratamientos necesarios (integración,
+limpieza y validación) para llevar a cabo un proyecto analítico.
+
+* Aprender a analizar los datos adecuadamente para abordar la información contenida en
+los datos.
+
+* Identificar la mejor representación de los resultados para aportar conclusiones sobre el
+problema planteado en el proceso analítico.
+
+* Actuar con los principios éticos y legales relacionados con la manipulación de datos en
+función del ámbito de aplicación.
+
+* Desarrollar las habilidades de aprendizaje que les permitan continuar estudiando de un
+modo que tendrá que ser en gran medida autodirigido o autónomo.
+
+* Desarrollar la capacidad de búsqueda, gestión y uso de información y recursos en el
+ámbito de la ciencia de datos.
+ 
+# Descripción del dataset
+**¿Por qué es importante y qué pregunta/problema pretende responder?**
+
+El conjunto de datos objeto de análisis se ha obtenido a partir de este enlace en Kaggle (https://www.kaggle.com/uciml/red-wine-quality-cortez-et-al-2009) y está constituido por 12 características (columnas) que presentan 1599 muestras de vinos tintos (filas o registros) de la región del norte de Portugal "Vinho Verde".
+
+Entre los campos de este conjunto de datos, encontramos los siguientes:
+
+*	**fixed acidity**: Por acidez fija entendemos la suma, un valor de concentración generalmente expresado en gramos por litro, de todos los ácidos presentes en el vino que presentan una característica común, son poco volátiles. Si en el laboratorio sometemos el vino a una destilación estos ácidos no pasan al destilado ya que no se volatilizan, permanecen en el vino. Esta característica hace que su concentración sea fácilmente medible.
+
+*	**volatile acidity**: Durante los procesos bioquímicos de ambas fermentaciones, tanto alcohólica como maloláctica, la actividad microbiana genera otros ácidos que presentan una característica diferenciadora de los anteriores, son volátiles. Cuando en el laboratorio sometemos el vino a destilación estos ácidos se volatilizan y pasan al destilado. Esta característica hace que su concentración sea más difícil de medir que en el caso de los no volátiles. La suma de estos ácidos volátiles, también expresada en gramos por litro, se denomina acidez volátil. El principal ácido volátil del vino es el ácido acético, procedente de la oxidación del alcohol, aunque existen otros presentes en menores cantidades como el fórmico, el butírico y el propiónico. Estos ácidos volátiles, en determinadas concentraciones, provocan defectos en los vinos por lo que se procura mantenerlos en los niveles más bajos que sea posible durante la fermentación.
+
+*	**citric acid**: El ácido cítrico da frescura al vino, puede ser utilizado para la acidificación química de los vinos o por su acción estabilizante particularmente para limitar los riesgos de quiebras férricas o para el prelavado de placas filtrantes. El contenido máximo en los vinos puede estar sometido a límites reglamentarios.
+
+*	**residual sugar**: cantidad de azúcar que permanece después de la fermentación. No es común encontrar vinos con menos de un gramo por litro y aquellos que tienen más de 45 gramos por litros se consideran dulces.
+
+*	**chlorides**: cantidad de sal en el vino.
+
+*	**free sulfur dioxide**: el SO2 Libre se divide a su vez en tres estados posibles, dependientes directamente del pH: Molecular (es el que cumple la acción antiséptica, antimicrobiana, y cierta función antioxidante), Bisulfito (responsable de la acción antioxidásica. También capaz de formar sales ácidas) y Sulfito (su presencia es despreciable y su influencia mínima). Para poder plasmar la influencia del pH en el SO2 Libre, bastaría con citar que a un pH igual a 4,0, la concentración de SO2 Molecular, es diez veces menor que a un pH igual a 3,0, por lo tanto lo es también su acción.
+
+*	**total sulfur dioxide**: el SO2 Total es la suma de SO2 Libre + SO2 Combinado. Es de destacar, que con las técnicas reinantes de vinificación y el avance de los estudios, el uso del anhídrido sulfuroso es menor a lo que era varios años atrás, lográndose con dosis inferiores, resultados superiores. Y en lo que respecta a los distintos tipos de vinos, se utilizan en mayor cantidad en los dulces (a causa de la alta cantidad de azúcar remanente), seguidos por los blancos (por ser muy oxidables), y finalmente los que menor tasa de SO2 requieren son los tintos, por poseer antioxidantes propios (polifenoles).
+
+*	**density**: la densidad relativa a 20ºC o la densidad 20ºC/20ºC es la relación entre la masa volúmica de un vino o mosto y la del agua a la temperatura de 20ºC.
+
+*	**pH**: La determinación del pH en el mosto y el vino es una medida complementaria de la acidez total porque nos permite medir la fuerza de los ácidos que contienen. El pH usual de un vino puede variar entre 2,7 y 3,8 dependiendo si es blanco o tinto.
+
+*	**sulphates**: la aplicación del sulfuroso en enología se limita a usos antimicrobianos, actuando contra microbios (mohos, bacterias y levaduras negativas); y usos antioxidativos o antioxidásicos, actuando contra oxidasas que son enzimas que van en las uvas y que pueden deteriorar el color y el sabor del vino.
+
+*	**alcohol**: porcentaje de alcohol que contiene el vino.
+
+* **quality**: variable de salida (basada en los datos, otorga una puntuación entre 0 y 10).
+
+A partir de este conjunto de datos se plantea la problemática de determinar qué variables (propiedades fisicoquímicas) influyen más sobre la calidad de un vino.
+
+#Integración y selección de los datos de interés a analizar.
+
+**Carga de los datos**
+
+Antes de comenzar con la limpieza de los datos, procedemos a realizar la lectura del fichero
+en formato CSV **winequality-red.csv** en el que se encuentran. El resultado devuelto por la llamada a la función
+read.csv() será un objeto data.frame:
+
+
+```{r lectura, echo=TRUE, eval=TRUE}
+# Lectura de datos
+ datos <- read.csv( "winequality-red.csv")
+ head(datos)
+
+# Tipo de dato asignado a cada campo
+ sapply( datos, class)
+
+```
+Observamos cómo los tipos de datos asignados automáticamente por R a las variables
+se corresponden con el dominio de estas y que todas las variables son cuantitativas.
+
+```{r, echo=TRUE, eval=TRUE}
+# Para tener una primera idea, mostramos un resumen de cada una de las variables
+ summary(datos)
+```
+
+
+
+**Selección de los datos de interés**
+
+La gran mayoría de los atributos presentes en el conjunto de datos se corresponden con
+características que reúnen los diversos vinos recogidos en forma de registros, por lo que
+será conveniente tenerlos en consideración durante la realización de los análisis.
+
+
+# Limpieza de los datos.
+## ¿Los datos contienen ceros o elementos vacíos? ¿Cómo gestionarías cada uno de estos casos?
+Comúnmente, se utilizan los ceros como centinela para indicar la ausencia de ciertos valores.
+Vamos a proceder a conocer a continuación qué campos contienen elementos con valores ceros o elementos vacíos:
+```{r}
+# Números de valores cero por campo
+sapply(datos, function(x) sum(x==0))
+```
+Como podemos observar solo el campo citric.acid tiene valores cero.
+Según podemos ver en el siguiente enlace(http://waterhouse.ucdavis.edu/whats-in-wine/fixed-acidity) la concentración de ácido cítrico puede ser entre 0 y 500 mg/L, por lo tanto, podemos dar esos valores como buenos.
+
+```{r}
+# Números de valores vacíos por campo
+sapply(datos, function(x) sum(is.na(x)))
+
+```
+Como podemos observar no existen valores vacíos
+
+En el caso en que para hubieramos encontrado casos de valores cero que no fueran admisibles para las variables o valores vacíos, podríamos haber empleado un método de imputación de valores basado en la similitud o diferencia entre los registros: la imputación basada en k vecinos más próximos (en inglés, kNN-imputation). La elección de esta alternativa se realiza bajo la hipótesis de que nuestros registros guardan cierta relación. No obstante, es mejor trabajar con datos "aproximados" que con los propios elementos vacíos, ya que obtendremos análisis con menor margen de error.
+
+## Identificación y tratamiento de valores extremos.
+Los valores extremos o outliers son aquellos que parecen no ser congruentes si los comparamos con el resto de los datos. Para identificarlos, vamos a utilizar la función boxplots.stats().
+Así, se mostrarán sólo los valores atípicos para aquellas variables que los contienen:
+
+```{r}
+# Identificación de outliers
+boxplot.stats(datos$fixed.acidity)$out
+```
+
+```{r}
+boxplot.stats(datos$volatile.acidity)$out
+```
+
+```{r}
+boxplot.stats(datos$citric.acid)$out
+```
+
+```{r}
+boxplot.stats(datos$residual.sugar)$out
+```
+
+```{r}
+boxplot.stats(datos$chlorides)$out
+```
+
+```{r}
+boxplot.stats(datos$free.sulfur.dioxide)$out
+```
+
+```{r}
+boxplot.stats(datos$total.sulfur.dioxide)$out
+```
+
+```{r}
+boxplot.stats(datos$density)$out
+```
+
+```{r}
+boxplot.stats(datos$pH)$out
+```
+
+```{r}
+boxplot.stats(datos$sulphates)$out
+```
+
+```{r}
+boxplot.stats(datos$alcohol)$out
+```
+
+```{r}
+boxplot.stats(datos$quality)$out
+```
+
+Tras revisar los valores comprobamos que pueden darse perfectamente ya que se encuentran dentro de los rangos normales para cada uno de ellos. Es por ello que el manejo de estos valores extremos consistirá en simplemente dejarlos como actualmente están recogidos.
+
+# Análisis de los datos.
+## Selección de los grupos de datos que se quieren analizar/comparar (planificación de los análisis a aplicar).
+
+A continuación, se seleccionan los grupos dentro de nuestro conjunto de datos que pueden
+resultar interesantes para analizar y/o comparar. No obstante, como se verá en el apartado
+consistente en la realización de pruebas estadísticas, no todos se utilizarán.
+
+```{r, echo=TRUE, eval=TRUE}
+# Agrupación por nivel de pH
+datos$pHfact[datos$pH <= 3.4] <- "normal"
+datos$pHfact[datos$pH > 3.4] <- "alto"
+
+datos$pHfact <- as.factor(datos$pHfact)
+```
+
+
+```{r, echo=TRUE, eval=TRUE}
+# Agrupación por nivel de acidez fija
+datos$fixacidfact[datos$fixed.acidity <= 9.2] <- "normal"
+datos$fixacidfact[datos$fixed.acidity > 9.2] <- "alto"
+
+datos$fixacidfact <- as.factor(datos$fixacidfact)
+```
+
+```{r, echo=TRUE, eval=TRUE}
+# Agrupación por nivel de azúcar residual
+datos$resisugfact[datos$residual.sugar <= 2.6] <- "normal"
+datos$resisugfact[datos$residual.sugar > 2.6] <- "alto"
+
+datos$resisugfact <- as.factor(datos$resisugfact)
+```
+
+```{r, echo=TRUE, eval=TRUE}
+# Exportación de los datos finales en .csv
+
+write.csv(datos, "winequality-red_final.csv")
+```
+
+## Comprobación de la normalidad y homogeneidad de la varianza.
+
+Para la comprobación de que los valores que toman nuestras variables cuantitativas provienen
+de una población distribuida normalmente, utilizaremos la prueba de normalidad de Anderson-
+Darling.
+Así, se comprueba que para que cada prueba se obtiene un p-valor superior al nivel de
+significación prefijado alpha = 0, 05. Si esto se cumple, entonces se considera que variable en
+cuestión sigue una distribución normal.
+
+```{r}
+alpha = 0.05
+col.names = colnames(datos)
+for (i in 1:ncol(datos)) {
+  if (i == 1) cat("Variables que no siguen una distribución normal:\n")
+  if (is.integer(datos[,i]) | is.numeric(datos[,i])) {
+    p_val = ad.test(datos[,i])$p.value
+  if (p_val < alpha) {
+    cat(col.names[i])
+    # Format output
+    if (i < ncol(datos) - 1) cat(", ")
+    if (i %% 3 == 0) cat("\n")
+    }
+  }
+}
+```
+
+Seguidamente, pasamos a estudiar la homogeneidad de varianzas mediante la aplicación de
+un test de Fligner-Killeen. 
+
+En este caso, estudiaremos esta homogeneidad en cuanto a
+los grupos conformados por los test que presentan un pH alto (>3.4) frente a un pH normal (<=3.4). 
+Para ello utilizamos la variable pHfact que representa ambos grupos.
+En el siguiente test, la hipótesis nula consiste en que ambas varianzas son iguales.
+
+```{r}
+fligner.test(quality ~ pHfact, data = datos)
+```
+Puesto que obtenemos un p-valor superior a 0,05, aceptamos la hipótesis de que las varianzas
+de ambas muestras son homogéneas.
+
+
+Procedemos igualmente con la acidez fija.
+
+```{r}
+fligner.test(quality ~ fixacidfact, data = datos)
+```
+Puesto que obtenemos un p-valor superior a 0,05, aceptamos la hipótesis de que las varianzas
+de ambas muestras son homogéneas.
+
+
+Finalmente analizaremos el caso del azúcar residual.
+
+```{r}
+fligner.test(quality ~ resisugfact, data = datos)
+```
+Puesto que obtenemos un p-valor superior a 0,05, aceptamos la hipótesis de que las varianzas
+de ambas muestras son homogéneas.
+
+
+## Aplicación de pruebas estadísticas para comparar los grupos de datos. 
+**¿Qué variables cuantitativas influyen más en la calidad?**
+En primer lugar, procedemos a realizar un análisis de correlación entre las distintas variables
+para determinar cuáles de ellas ejercen una mayor influencia sobre el precio final del vehículo.
+Para ello, se utilizará el coeficiente de correlación de Spearman, puesto que hemos visto que
+tenemos datos que no siguen una distribución normal.
+
+```{r warning=FALSE}
+corr_matrix <- matrix(nc = 2, nr = 0)
+colnames(corr_matrix) <- c("estimate", "p-value")
+# Calcular el coeficiente de correlación para cada variable cuantitativa
+# con respecto al campo "precio"
+for (i in 1:(ncol(datos) - 4)) {
+  if (is.integer(datos[,i]) | is.numeric(datos[,i])) {
+    spearman_test = cor.test(datos[,i],
+                             datos[,length(datos)-3],
+                             method = "spearman")
+    corr_coef = spearman_test$estimate
+    p_val = spearman_test$p.value
+    # Añadimos una fila a la matriz
+    pair = matrix(ncol = 2, nrow = 1)
+    pair[1][1] = corr_coef
+    pair[2][1] = p_val
+    corr_matrix <- rbind(corr_matrix, pair)
+    rownames(corr_matrix)[nrow(corr_matrix)] <- colnames(datos)[i]
+  }
+}
+
+print(corr_matrix)
+```
+Así, identificamos cuáles son las variables más correlacionadas con la calidad en función de su
+proximidad con los valores -1 y +1. Teniendo esto en cuenta, queda patente que no existe ninguna
+variable relevante, la que más se aproxima a los valores -1 y +1 es alcohol pero se queda lejos.
+
+Nota. Para cada coeficiente de correlación se muestra también su p-valor asociado, puesto
+que éste puede dar información acerca del peso estadístico de la correlación obtenida.
+
+**¿La calidad del vino es mayor en caso de tener un pH alto?**
+La segunda prueba estadística que se aplicará consistirá en un contraste de hipótesis sobre
+dos muestras para determinar si la calidad del vino es superior dependiendo del nivel de pH 
+(normal o alto). Para ello, tendremos dos muestras: la primera de ellas se
+corresponderá a la calidad de las muestras con pH normal y, la segunda, con aquellas
+que presentan un pH alto.
+Se debe destacar que un test paramétrico como el que a continuación se utiliza necesita que
+los datos sean normales, si la muestra es de tamaño inferior a 30. Como en nuestro caso,
+n > 30, el contraste de hipótesis siguiente es válido.
+
+```{r, echo=TRUE, eval=TRUE}
+# Agrupación por nivel de pH
+datos.pHnormal.calidad <- datos[datos$pHfact == "normal",]$quality
+datos.pHalto.calidad <- datos[datos$pHfact == "alto",]$quality
+```
+
+Así, se plantea el siguiente contraste de hipótesis de dos muestras sobre la diferencia de medias, el cual es unilateral atendiendo a la formulación de la hipótesis alternativa:
+
+*H0 : u1 ??? u2 = 0*
+*H1 : u1 ??? u2 < 0*
+
+donde u1 es la media de la población de la que se extrae la primera muestra y u2 es la media de la población de la que extrae la segunda. Así, tomaremos alpha = 0, 05.
+
+```{r, echo=TRUE, eval=TRUE}
+t.test(datos.pHnormal.calidad,datos.pHalto.calidad, alternative="less")
+```
+Puesto que no hemos obtenido un p-valor menor que el valor de significación fijado, aceptamos la hipótesis nula. Por tanto, podemos concluir que la calidad del vino no es mayor si el pH es alto.
+
+**Modelo de regresión lineal**
+
+Tal y como se planteó en los objetivos de la actividad, resultará de mucho interés poder realizar predicciones sobre el calidad de las muestras dadas sus características. Así, se calculará un modelo de regresión lineal utilizando regresores cuantitativos con el que poder realizar las predicciones de la calidad.
+Para obtener un modelo de regresión lineal considerablemente eficiente, lo que haremos será obtener varios modelos de regresión utilizando las variables que estén más correladas con respecto a la calidad, según la tabla obtenida anteriormente. Así, de entre todos los modelos que tengamos, escogeremos el mejor utilizando como criterio aquel que presente un mayor coeficiente de determinación (R2).
+
+```{r, echo=TRUE, eval=TRUE}
+# Regresores cuantitativos con mayor coeficiente
+# de correlación con respecto a la calidad
+alcohol = datos$alcohol
+acido.volatil = datos$volatile.acidity
+sulfuroso = datos$sulphates
+acido.citrico = datos$citric.acid
+so2.total = datos$total.sulfur.dioxide
+sal = datos$chlorides
+densidad = datos$density
+
+# Variable a predecir
+calidad = datos$quality
+
+# Generación de varios modelos
+modelo1 <- lm(calidad ~ alcohol + acido.volatil + sulfuroso + 
+                  acido.citrico + so2.total + sal + densidad, data = datos)
+modelo2 <- lm(calidad ~ alcohol + acido.volatil + sulfuroso + 
+                  acido.citrico + so2.total, data = datos)
+modelo3 <- lm(calidad ~ alcohol + sulfuroso + sal + densidad +
+                  so2.total, data = datos)
+modelo4 <- lm(calidad ~ acido.citrico + acido.volatil + sulfuroso +
+                  so2.total, data = datos)
+modelo5 <- lm(calidad ~ alcohol + so2.total + sal + densidad, data = datos)
+
+
+```
+Para los anteriores modelos de regresión lineal múltiple obtenidos, podemos utilizar el coeficiente de determinación para medir la bondad de los ajustes y quedarnos con aquel modelo que mejor coeficiente presente.
+
+```{r, echo=TRUE, eval=TRUE}
+# Tabla con los coeficientes de determinación de cada modelo
+tabla.coeficientes <- matrix(c(1, summary(modelo1)$r.squared,
+                          2, summary(modelo2)$r.squared,
+                          3, summary(modelo3)$r.squared,
+                          4, summary(modelo4)$r.squared,
+                          5, summary(modelo5)$r.squared),
+                          ncol = 2, byrow = TRUE)
+colnames(tabla.coeficientes) <- c("Modelo", "R^2")
+tabla.coeficientes
+```
+En este caso, tenemos que el primer modelo es el más conveniente dado que tiene un mayor coeficiente de determinación. Ahora, empleando este modelo, podemos proceder a realizar predicciones de calidad de muestras como la siguiente:
+```{r, echo=TRUE, eval=TRUE}
+newdata <- data.frame(
+  alcohol = 9,
+  acido.volatil = 0.54,
+  sulfuroso = 0.59,
+  acido.citrico = 0.18,
+  so2.total = 35,
+  sal = 0.08,
+  densidad = 0.9972
+)
+
+# Predecir la calidad
+predict(modelo1, newdata)
+```
+
+# Representación de los resultados a partir de tablas y gráficas.
+
+```{r, echo=TRUE, eval=TRUE}
+# Histograma de cada una de las variables
+hist(datos$fixed.acidity)
+hist(datos$volatile.acidity)
+hist(datos$citric.acid)
+hist(datos$residual.sugar)
+hist(datos$chlorides)
+hist(datos$free.sulfur.dioxide)
+hist(datos$total.sulfur.dioxide)
+hist(datos$density)
+hist(datos$pH)
+hist(datos$sulphates)
+hist(datos$alcohol)
+hist(datos$quality)
+```
+
+```{r, echo=TRUE, eval=TRUE}
+# Boxplot con la representación de los outliers
+boxplot(datos$fixed.acidity)
+boxplot(datos$volatile.acidity)
+boxplot(datos$citric.acid)
+boxplot(datos$residual.sugar)
+boxplot(datos$chlorides)
+boxplot(datos$free.sulfur.dioxide)
+boxplot(datos$total.sulfur.dioxide)
+boxplot(datos$density)
+boxplot(datos$pH)
+boxplot(datos$sulphates)
+boxplot(datos$alcohol)
+boxplot(datos$quality)
+```
+
+
+```{r, echo=TRUE, eval=TRUE}
+# Represtación del matriz de correlación
+
+corrplot(corr_matrix, method="circle")
+
+```
+
+```{r, echo=TRUE, eval=TRUE}
+# Represtación del modelo 1
+
+plot(modelo1)
+
+```
+
+# Resolución del problema. 
+
+**A partir de los resultados obtenidos, ¿cuáles son las conclusiones? ¿Los resultados permiten responder al problema?**
+
+Como se ha visto, se han realizado tres tipos de pruebas estadísticas sobre un conjunto de datos que se correspondía con diferentes variables relativas a test de muestras de vino con motivo de cumplir en la medida de lo posible con el objetivo que se planteaba al comienzo. Para cada una de ellas, hemos podido ver cuáles son los resultados que arrojan (entre otros, mediante tablas) y qué conocimientos pueden extraerse a partir de ellas.
+
+
+Así, el análisis de correlación y el contraste de hipótesis nos ha permitido conocer cuáles de estas variables ejercen una mayor influencia sobre la calidad del vino, mientras que el
+modelo de regresión lineal obtenido resulta de utilidad a la hora de realizar predicciones para esta variable dadas unas características concretas.
+
+
+Previamente, se han sometido los datos a un preprocesamiento para manejar los casos de ceros o elementos vacíos y valores extremos (outliers). Para el caso del primero, se ha hecho uso de un método de imputación de valores de tal forma que no tengamos que eliminar registros del conjunto de datos inicial y que la ausencia de valores no implique llegar a resultados
+poco certeros en los análisis. Para el caso del segundo, el cual constituye un punto delicado a tratar, se ha optado por incluir los valores extremos en los análisis dado que parecen no resultar del todo atípicos si los comparamos con los valores que toman las correspondientes variables para test sobre muestras que se realizan normalmente.
+
+# Código 
+
+El código está disponible en el siguiente enlace de GitHub [https://github.com/lmesamo/data-analysis](https://github.com/lmesamo/data-analysis)
+
+
+#Referencias
+[Vinos diferentes - Acidez del vino](https://vinosdiferentes.com/en/wine-acidity/)
+
+[Blog Urbina Vinos - Práctica: Determinación de la Ácidez Total y pH de un Vino o Mosto](http://urbinavinos.blogspot.com/2015/11/practica-determinacion-de-la-acidez.html)
+
+[Infoagro - Métodos oficiales de análisis de vinos](http://www.infoagro.com/viticultura/vino/analisis_vinos.htm)
+
+[Vinopack - Los 6 criterios que determinan la calidad del vino](https://www.vinopack.es/criterios-que-determinan-la-calidad-en-el-vino)
+
+[Vinetur - Las propiedades del anhídrido sulfuroso en la elaboración del vino](https://www.vinetur.com/2016011026759/las-propiedades-del-anhidrido-sulfuroso-en-la-elaboracion-del-vino.html)
+
+[Blog Bodegas Comenge - El SO2 en los vinos](https://www.comenge.com/blog/enologia/el-so2-en-los-vinos.html)
+
+[El vino y su análisis - Departamento de Nutrición y Bromatología II - Facultad de Farmacia - Universidad Complutense de Madrid](https://eprints.ucm.es/29446/7/PIMCD%20N%C2%BA%20243.%20ANEXO%201.%20E-BOOK-%20EL%20VINO%20Y%20SU%20AN%C3%81LISIS.pdf)
+
+
+*Squire, Megan (2015). Clean Data. Packt Publishing Ltd.*
+
+*Jiawei Han, Micheine Kamber, Jian Pei (2012). Data mining: concepts and techniques. Morgan Kaufmann.*
+
+*Jason W. Osborne (2010). Data Cleaning Basics: Best Practices in Dealing with Extreme Scores. Newborn and Infant Nursing Reviews; 10 (1): pp. 1527-3369.*
+
+*Peter Dalgaard (2008). Introductory statistics with R. Springer Science & Business Media.*
+
+*Wes McKinney (2012). Python for Data Analysis. O'Reilley Media, Inc.*

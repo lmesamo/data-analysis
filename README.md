@@ -13,13 +13,21 @@ Esta práctica ha sido realizada de manera individual por Lorenzo Mesa Morales
 Para ejecutar el script es instalar las siguientes bibliotecas de R:
 
 library(knitr)
+
 library(VIM)
+
 library(stringr)
+
 library(plyr)
+
 library(dplyr)
+
 library(pROC)
+
 library(nortest)
+
 library(corrplot)
+
 
 # Ejecución
 El script es autoejecutable.
